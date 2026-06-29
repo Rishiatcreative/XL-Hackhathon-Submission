@@ -416,18 +416,17 @@ export function LandingPage({ onEnterDashboard, onRunDiscovery }: LandingPagePro
         ref={heroRef}
         className="relative min-h-[90vh] flex flex-col justify-center items-center px-4 py-20 text-center max-w-5xl mx-auto border-b border-border/60"
         style={mounted ? {
-          background: `radial-gradient(700px circle at ${mousePos.x}px ${mousePos.y}px, ${
-            resolvedTheme === "dark" ? "rgba(99, 102, 241, 0.04)" : "rgba(99, 102, 241, 0.03)"
-          }, transparent 80%)`
+          background: `radial-gradient(700px circle at ${mousePos.x}px ${mousePos.y}px, ${resolvedTheme === "dark" ? "rgba(99, 102, 241, 0.04)" : "rgba(99, 102, 241, 0.03)"
+            }, transparent 80%)`
         } : undefined}
       >
         {/* Glow Element */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-indigo-500/10 blur-[100px] pointer-events-none" />
-        
+
         <Badge className="bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400 mb-6 px-3 py-1 font-mono uppercase tracking-wider text-[10px]">
           🚀 AI-Powered Sales Intelligence Platform
         </Badge>
-        
+
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-foreground leading-none max-w-4xl bg-gradient-to-b from-foreground via-foreground/90 to-muted-foreground bg-clip-text text-transparent">
           Discover Buying Signals. <br className="hidden sm:inline" />
           <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">
@@ -549,7 +548,7 @@ export function LandingPage({ onEnterDashboard, onRunDiscovery }: LandingPagePro
 
         <div className="grid gap-6 md:grid-cols-4 relative">
           <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-border hidden md:block -translate-y-1/2 z-0" />
-          
+
           {[
             {
               step: "01",
@@ -670,11 +669,10 @@ export function LandingPage({ onEnterDashboard, onRunDiscovery }: LandingPagePro
               <button
                 key={node.id}
                 onClick={() => setActiveArchNode(node.id)}
-                className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${
-                  activeArchNode === node.id
+                className={`w-full text-left p-3.5 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${activeArchNode === node.id
                     ? "bg-indigo-500/5 dark:bg-indigo-600/10 border-indigo-500 text-foreground"
                     : "bg-card border-border text-muted-foreground hover:border-border/80 hover:text-foreground"
-                }`}
+                  }`}
               >
                 <span className="text-xs font-bold font-mono">{node.name}</span>
                 <ArrowRight className={`h-3.5 w-3.5 transition-transform ${activeArchNode === node.id ? "translate-x-1" : ""}`} />
@@ -755,11 +753,10 @@ export function LandingPage({ onEnterDashboard, onRunDiscovery }: LandingPagePro
               <button
                 key={idx}
                 onClick={() => setShowcaseIndex(idx)}
-                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-1 ${
-                  showcaseIndex === idx
+                className={`w-full text-left p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col gap-1 ${showcaseIndex === idx
                     ? "bg-slate-100 dark:bg-slate-900 border-border text-foreground"
                     : "bg-transparent border-transparent text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 <span className="text-xs font-bold uppercase tracking-wider">{slide.title}</span>
                 <span className="text-[10px] text-muted-foreground leading-normal font-medium">{slide.desc}</span>
@@ -888,7 +885,7 @@ export function LandingPage({ onEnterDashboard, onRunDiscovery }: LandingPagePro
       {/* SECTION 11: CALL TO ACTION */}
       <section className="py-24 max-w-4xl mx-auto px-4 text-center border-b border-border/60 relative">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-indigo-500/10 blur-[100px] pointer-events-none" />
-        
+
         <div className="space-y-6 relative z-10">
           <h2 className="text-3xl sm:text-5xl font-extrabold text-foreground leading-tight">
             Ready to Discover Your <br />
