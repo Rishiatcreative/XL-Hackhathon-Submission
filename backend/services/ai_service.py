@@ -24,6 +24,52 @@ AI_PIPELINE_VERSION = settings.ai_pipeline_version
 
 _last_metadata = {}
 
+def invoke_llm_with_fallback(messages, temperature=0.2):
+    import os
+    llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
+    
+    if llm_provider == "openai" and os.getenv("OPENAI_API_KEY"):
+        from langchain_openai import ChatOpenAI
+        llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            api_key=os.getenv("OPENAI_API_KEY"),
+            temperature=temperature
+        )
+        return llm.invoke(messages)
+    
+    from langchain_groq import ChatGroq
+    groq_api_key = os.getenv("GROQ_API_KEY")
+    
+    # Try models in order of capability & fallback for rate limits
+    models = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "mixtral-8x7b-32768",
+        "llama3-8b-8192"
+    ]
+    
+    last_err = None
+    for model in models:
+        try:
+            print(f"[AI SERVICE] Trying Groq model: {model}")
+            llm = ChatGroq(
+                model=model,
+                api_key=groq_api_key,
+                temperature=temperature
+            )
+            return llm.invoke(messages)
+        except Exception as e:
+            last_err = e
+            err_str = str(e).lower()
+            if "rate_limit" in err_str or "429" in err_str or "limit reached" in err_str:
+                print(f"[AI SERVICE WARNING] Rate limit hit on {model}. Falling back to next model. Error: {e}")
+                continue
+            else:
+                raise e
+    
+    if last_err:
+        raise last_err
+
 @with_retries(max_retries=3, initial_delay=1.0)
 def get_trigger(company_url: str) -> dict:
     if not os.getenv("OPENAI_API_KEY") and not os.getenv("GROQ_API_KEY"):
@@ -122,23 +168,7 @@ def analyze_company_pipeline(company_url: str, website_content: str, news: list,
     if not os.getenv("OPENAI_API_KEY") and not os.getenv("GROQ_API_KEY"):
         raise ValueError("AI Agent initialization failed: Both OPENAI_API_KEY and GROQ_API_KEY are missing from configuration.")
 
-    llm_provider = os.getenv("LLM_PROVIDER", "openai").lower()
-    if llm_provider == "openai" and os.getenv("OPENAI_API_KEY"):
-        from langchain_openai import ChatOpenAI
-        llm = ChatOpenAI(
-            model="gpt-4o-mini",
-            api_key=os.getenv("OPENAI_API_KEY"),
-            temperature=0.0
-        )
-    else:
-        from langchain_groq import ChatGroq
-        llm = ChatGroq(
-            model="llama-3.3-70b-versatile",
-            api_key=os.getenv("GROQ_API_KEY"),
-            temperature=0.0
-        )
-
-    print("[PIPELINE] LLM model initialized")
+    print("[PIPELINE] LLM model initialized (using fallback executor)")
     
     # Format inputs
     news_text = ""
@@ -173,7 +203,8 @@ def analyze_company_pipeline(company_url: str, website_content: str, news: list,
         "7. For the 'contacts' array, map all input contacts and enrich them if possible. You may also extract new contacts from the website content:\n"
         "   - Preserve all input contacts. Do NOT fabricate or invent names, emails, or LinkedIn links.\n"
         "   - Set the 'source' for each contact: 'Hunter' if they were in the input list, 'Firecrawl' if they were found in the website content, and 'AI Inference' if they were found in news articles.\n"
-        "   - Never fabricate roles. If the role cannot be determined, set it to 'Role unavailable' or null. Do not use 'Unknown' as a role.\n\n"
+        "   - Never fabricate roles. If the role cannot be determined, set it to 'Role unavailable' or null. Do not use 'Unknown' as a role.\n"
+        "8. For the 'sales_playbook' JSON object, output details using short, structured bullet points rather than long paragraphs. Ground every signal, outreach recommendation, and next best action in the provided website and news text. If any information is missing or not provided, state 'Information unavailable'.\n\n"
         "Return a JSON object with these EXACT keys (return ONLY JSON, no other text or markdown wrapping):\n"
         "{\n"
         "  \"company_name\": \"string (inferred company name)\",\n"
@@ -194,7 +225,20 @@ def analyze_company_pipeline(company_url: str, website_content: str, news: list,
         "      \"linkedin\": \"string or null\",\n"
         "      \"source\": \"string (Hunter, Firecrawl, or AI Inference)\"\n"
         "    }\n"
-        "  ]\n"
+        "  ],\n"
+        "  \"sales_playbook\": {\n"
+        "    \"lead_priority\": \"string (High | Medium | Low based on ICP qualification)\",\n"
+        "    \"why_qualified\": \"string (bullet points explaining qualification reasons)\",\n"
+        "    \"buying_signals\": \"string (bullet points detailing detected buying signals)\",\n"
+        "    \"supporting_evidence\": \"string (bullet points referencing specific news headers, website carrier pages, or quotes that support these signals)\",\n"
+        "    \"recommended_decision_makers\": \"string (bullet points of target roles and names if available)\",\n"
+        "    \"outreach_strategy\": \"string (bullet points of outreach and value prop suggestions)\",\n"
+        "    \"communication_channel\": \"string (e.g. Email | LinkedIn | Phone)\",\n"
+        "    \"followup_timeline\": \"string (e.g. 3 days, 1 week)\",\n"
+        "    \"subject_line\": \"string (personalized cold email subject line)\",\n"
+        "    \"cold_email_opening\": \"string (personalized cold email opening line)\",\n"
+        "    \"next_best_action\": \"string (single bullet point of the immediate next step)\"\n"
+        "  }\n"
         "}"
     )
 
@@ -219,7 +263,7 @@ Contacts:
         HumanMessage(content=context),
     ]
 
-    response = llm.invoke(messages)
+    response = invoke_llm_with_fallback(messages, temperature=0.0)
     try:
         result = extract_json(response.content)
     except Exception as e:
@@ -233,4 +277,93 @@ Contacts:
     assert "summary" in result
     assert "contacts" in result
     
+    if "sales_playbook" not in result:
+        result["sales_playbook"] = {
+            "lead_priority": "Medium",
+            "why_qualified": "Information unavailable.",
+            "buying_signals": "Information unavailable.",
+            "supporting_evidence": "Information unavailable.",
+            "recommended_decision_makers": "Information unavailable.",
+            "outreach_strategy": "Information unavailable.",
+            "communication_channel": "Email",
+            "followup_timeline": "1 week",
+            "subject_line": "Information unavailable.",
+            "cold_email_opening": "Information unavailable.",
+            "next_best_action": "Information unavailable."
+        }
+    
     return result
+
+def run_company_chat(company, contacts, messages_history: list) -> str:
+    """
+    Runs chat inference utilizing ONLY the cached company and contact context.
+    No scraping or secondary API runs occur.
+    """
+    from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+    import os
+
+    # Build contacts context
+    contacts_str = ""
+    for c in contacts:
+        contacts_str += f"- Name: {c.name}, Role: {c.role or 'Role not available'}, Email: {c.email or 'Not available'}, Source: {c.source}\n"
+    if not contacts_str:
+        contacts_str = "No verified contacts found."
+
+    # Build sales playbook string representation for prompt
+    playbook_str = ""
+    if company.sales_playbook:
+        for k, v in company.sales_playbook.items():
+            key_name = k.replace("_", " ").capitalize()
+            playbook_str += f"- {key_name}: {v}\n"
+    else:
+        playbook_str = "No playbook generated."
+
+    # Build ICP breakdown string representation for prompt
+    breakdown_str = ""
+    if company.icp_breakdown:
+        for k, v in company.icp_breakdown.items():
+            key_name = k.replace("_", " ").capitalize()
+            breakdown_str += f"- {key_name}: {v}%\n"
+    else:
+        breakdown_str = "No breakdown calculated."
+
+    context = (
+        f"Company Name: {company.name}\n"
+        f"Website: {company.website}\n"
+        f"Industry: {company.industry or 'Not specified'}\n"
+        f"Employee Count: {company.employee_count or 'Unknown'}\n"
+        f"ICP Score: {company.icp_score}\n"
+        f"Qualified: {company.qualified}\n"
+        f"Trigger Event: {company.trigger_type} (Source: {company.trigger_source or 'Unknown'}, Confidence: {company.trigger_confidence or 'Unknown'})\n"
+        f"AI Executive Summary: {company.summary}\n"
+        f"News Headlines: {company.news_headlines or 'None'}\n\n"
+        f"--- CACHED RECRUITMENT & ENRICHMENT DATA ---\n"
+        f"Contacts:\n{contacts_str}\n"
+        f"ICP Breakdown:\n{breakdown_str}\n"
+        f"Sales Playbook:\n{playbook_str}\n"
+    )
+
+    system_prompt = (
+        "You are 'ProspectIQ Chat', an intelligent sales enablement assistant. Your job is to answer user queries about this target company.\n"
+        "Here is the context about this company already discovered and stored in our database. Do NOT rerun scrapers. Answer queries using ONLY this information:\n\n"
+        f"{context}\n"
+        "## CHAT RULES:\n"
+        "1. You must ONLY answer using details present in the cached context. Do NOT hallucinate, guess, or reference outside information.\n"
+        "2. If the user asks for a cold email or outreach strategy, use the subject line, email opening, and timeline from the playbook to generate a complete personalized email template.\n"
+        "3. Keep replies concise, action-oriented, and formatted clearly with clean bullet points. Avoid markdown bold ** syntax in headings.\n"
+        "4. If evidence is missing, state 'Information unavailable.' rather than inventing it."
+    )
+
+    # Initialize messages
+    langchain_messages = [SystemMessage(content=system_prompt)]
+    for msg in messages_history:
+        role = msg.get("role")
+        content = msg.get("content")
+        if role == "user":
+            langchain_messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            langchain_messages.append(AIMessage(content=content))
+
+    response = invoke_llm_with_fallback(langchain_messages, temperature=0.2)
+    return response.content
+

@@ -6,6 +6,7 @@ import { apiService } from "@/services/api";
 
 export function useCompanies() {
   const [companies, setCompanies] = React.useState<Company[]>([]);
+  const [discoveryRuns, setDiscoveryRuns] = React.useState<number>(0);
   const [isLoading, setIsLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
   
@@ -23,8 +24,9 @@ export function useCompanies() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiService.getCompanies();
-      setCompanies(data);
+      const res = await apiService.getCompanies();
+      setCompanies(res.companies);
+      setDiscoveryRuns(res.discoveryRuns);
     } catch (err: any) {
       console.error("Error loading companies from FastAPI:", err);
       setError(
@@ -92,9 +94,10 @@ export function useCompanies() {
   const runDiscovery = async (url: string) => {
     setIsDiscovering(true);
     try {
-      await apiService.runDiscovery(url);
+      const result = await apiService.runDiscovery(url);
       // Automatically refresh company list after discovery
       await fetchCompanies();
+      return result;
     } catch (err: any) {
       console.error("Error running discovery on FastAPI:", err);
       throw err; // bubble up to page for notification/handling
@@ -113,6 +116,7 @@ export function useCompanies() {
 
   return {
     companies,
+    discoveryRuns,
     filteredCompanies,
     uniqueIndustries,
     uniqueTriggers,

@@ -52,11 +52,11 @@ def normalize_trigger_type(trigger: str) -> str:
 
 def normalize_role(role: str) -> str:
     if not role:
-        return "Role unavailable"
+        return "Role not available"
         
     role_lower = role.lower().strip()
-    if not role_lower or "unknown" in role_lower or "role unavailable" in role_lower:
-        return "Role unavailable"
+    if not role_lower or "unknown" in role_lower or "role unavailable" in role_lower or "role not available" in role_lower:
+        return "Role not available"
         
     if "chief revenue officer" in role_lower or "cro" in role_lower or "vp sales" in role_lower or "head of sales" in role_lower:
         return "Sales Leader"

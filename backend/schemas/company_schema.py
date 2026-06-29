@@ -23,6 +23,10 @@ class CompanyBase(BaseModel):
     news_used: Optional[bool] = None
     news_headlines: Optional[str] = None
     discovery_timestamp: Optional[datetime] = None
+    sales_playbook: Optional[dict] = None
+    icp_breakdown: Optional[dict] = None
+    discovery_confidence: Optional[float] = None
+    evidence_sources: Optional[List[str]] = None
 
 class CompanyResponse(CompanyBase):
     id: UUID

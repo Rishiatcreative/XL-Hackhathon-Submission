@@ -15,10 +15,14 @@ import { Company } from "@/types/company";
 import { apiService } from "@/services/api";
 import { Search, SlidersHorizontal, Sparkles, RefreshCw, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PipelineTimeline } from "@/components/company/pipeline-timeline";
+import { LandingPage } from "@/components/landing-page";
+
 
 export default function DashboardPage() {
   const {
     companies,
+    discoveryRuns,
     filteredCompanies,
     uniqueIndustries,
     uniqueTriggers,
@@ -48,6 +52,8 @@ export default function DashboardPage() {
   const [selectedCompany, setSelectedCompany] = React.useState<Company | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = React.useState<boolean>(false);
   const [isLoadingDetails, setIsLoadingDetails] = React.useState<boolean>(false);
+  const [lastDiscoveryResult, setLastDiscoveryResult] = React.useState<any | null>(null);
+  const [viewMode, setViewMode] = React.useState<"landing" | "dashboard">("landing");
   const [toast, setToast] = React.useState<{ message: string; type: "success" | "error" } | null>(null);
 
   React.useEffect(() => {
@@ -90,11 +96,31 @@ export default function DashboardPage() {
     localSearchInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
+  const handleLandingRunDiscovery = async (url: string) => {
+    setViewMode("dashboard");
+    try {
+      setLastDiscoveryResult(null);
+      const res = await runDiscovery(url);
+      if (res && res.length > 0) {
+        setLastDiscoveryResult(res[0]);
+      }
+      setToast({ message: "Discovery completed successfully.", type: "success" });
+    } catch (err: any) {
+      console.error("Discovery run error:", err);
+      const errMsg = err?.response?.data?.detail || err?.message || "Unknown error occurred";
+      setToast({ message: `Discovery failed: ${errMsg}`, type: "error" });
+    }
+  };
+
   const handleNavbarRunDiscovery = async () => {
     const url = window.prompt("Enter company website URL to discover (e.g. https://acme.ai):", "https://acme.ai");
     if (!url) return;
     try {
-      await runDiscovery(url);
+      setLastDiscoveryResult(null);
+      const res = await runDiscovery(url);
+      if (res && res.length > 0) {
+        setLastDiscoveryResult(res[0]);
+      }
       setToast({ message: "Discovery completed successfully.", type: "success" });
     } catch (err: any) {
       console.error("Discovery run error:", err);
@@ -104,6 +130,15 @@ export default function DashboardPage() {
   };
 
   const hasActiveFilters = searchQuery !== "" || selectedIndustry !== "all" || selectedTrigger !== "all" || selectedQualified !== "all" || selectedScore !== "all";
+
+  if (viewMode === "landing") {
+    return (
+      <LandingPage
+        onEnterDashboard={() => setViewMode("dashboard")}
+        onRunDiscovery={handleLandingRunDiscovery}
+      />
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col min-h-screen relative">
@@ -182,7 +217,7 @@ export default function DashboardPage() {
             Could not calculate business metrics due to connection error.
           </div>
         ) : (
-          <StatsCards companies={filteredCompanies} />
+          <StatsCards companies={companies} discoveryRuns={discoveryRuns} />
         )}
 
         {/* Search, Filter Bar and Query Controls */}
@@ -210,7 +245,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Quick Filters Group */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
               <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mr-1">
                 <SlidersHorizontal className="h-3.5 w-3.5" />
                 <span className="max-sm:hidden">Filters:</span>
@@ -220,7 +255,7 @@ export default function DashboardPage() {
               <select
                 value={selectedIndustry}
                 onChange={(e) => setSelectedIndustry(e.target.value)}
-                className="h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium"
+                className="w-full sm:w-auto min-w-[120px] max-w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium"
               >
                 <option value="all">All Industries</option>
                 {uniqueIndustries.map((ind) => (
@@ -234,7 +269,7 @@ export default function DashboardPage() {
               <select
                 value={selectedTrigger}
                 onChange={(e) => setSelectedTrigger(e.target.value)}
-                className="h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium text-ellipsis overflow-hidden"
+                className="w-full sm:w-auto min-w-[120px] max-w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium text-ellipsis overflow-hidden"
               >
                 <option value="all">All Triggers</option>
                 {uniqueTriggers.map((trig) => (
@@ -248,7 +283,7 @@ export default function DashboardPage() {
               <select
                 value={selectedQualified}
                 onChange={(e) => setSelectedQualified(e.target.value)}
-                className="h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium"
+                className="w-full sm:w-auto min-w-[120px] max-w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium"
               >
                 <option value="all">All Statuses</option>
                 <option value="qualified">Qualified</option>
@@ -259,7 +294,7 @@ export default function DashboardPage() {
               <select
                 value={selectedScore}
                 onChange={(e) => setSelectedScore(e.target.value)}
-                className="h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium"
+                className="w-full sm:w-auto min-w-[120px] max-w-full h-9 rounded-lg border border-input bg-background px-3 py-1 text-xs shadow-xs focus:outline-hidden focus:ring-1 focus:ring-ring cursor-pointer text-muted-foreground hover:text-foreground font-medium"
               >
                 <option value="all">All Scores</option>
                 <option value="high">High (85+)</option>
@@ -273,7 +308,7 @@ export default function DashboardPage() {
                   variant="ghost"
                   size="sm"
                   onClick={resetFilters}
-                  className="h-9 text-xs rounded-lg text-indigo-500 hover:text-indigo-600 hover:bg-indigo-500/5 px-2.5 font-semibold cursor-pointer"
+                  className="h-9 text-xs rounded-lg text-indigo-500 hover:text-indigo-600 hover:bg-indigo-500/5 px-2.5 font-semibold cursor-pointer w-full sm:w-auto"
                 >
                   Reset
                 </Button>
@@ -283,7 +318,22 @@ export default function DashboardPage() {
         </div>
 
         {/* Lead Table / States Section */}
-        {isLoading || isDiscovering ? (
+        {isDiscovering ? (
+          <div className="grid gap-6 md:grid-cols-3 animate-in fade-in duration-300">
+            <div className="md:col-span-1">
+              <PipelineTimeline isDiscovering={isDiscovering} discoveryResult={lastDiscoveryResult} />
+            </div>
+            <div className="md:col-span-2 rounded-xl border border-border bg-card shadow-sm overflow-hidden p-8 flex flex-col justify-center items-center text-center space-y-4">
+              <div className="h-10 w-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+              <div className="space-y-1.5">
+                <h4 className="text-sm font-bold text-foreground">Discovery Agent Processing</h4>
+                <p className="text-xs text-muted-foreground max-w-sm">
+                  We are concurrently crawling website content, gathering recent news, and enriching verified contacts. Please stand by.
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : isLoading ? (
           <div className="rounded-xl border border-border bg-card shadow-xs overflow-hidden">
             <div className="border-b border-border bg-muted/40 px-6 py-4 flex items-center justify-between">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -310,6 +360,13 @@ export default function DashboardPage() {
           </div>
         ) : error ? (
           <ErrorState onRetry={refetch} description={error} />
+        ) : companies.length === 0 ? (
+          <EmptyState
+            title="No discoveries yet"
+            description="Run your first AI discovery."
+            actionText="Discover a Lead"
+            onAction={handleNavbarRunDiscovery}
+          />
         ) : filteredCompanies.length === 0 ? (
           <EmptyState onAction={resetFilters} />
         ) : (

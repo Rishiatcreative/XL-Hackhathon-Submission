@@ -105,7 +105,7 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
         ),
         cell: ({ row }) => (
           <span className="text-xs font-medium text-muted-foreground bg-muted/30 border border-border px-2 py-0.5 rounded-md">
-            {row.getValue("industry") || "N/A"}
+            {row.getValue("industry") || "Not specified"}
           </span>
         )
       },
@@ -128,7 +128,7 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
         ),
         cell: ({ row }) => (
           <Badge variant="trigger" className="text-[10px] whitespace-nowrap uppercase">
-            {row.getValue("trigger") || "none"}
+            {row.getValue("trigger") || "No trigger detected"}
           </Badge>
         )
       },
@@ -153,7 +153,7 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
           const val = row.getValue("employees") as number;
           return (
             <span className="text-xs font-mono font-medium text-foreground">
-              {val ? val.toLocaleString() : "N/A"}
+              {val ? val.toLocaleString() : "Unknown"}
             </span>
           );
         }
@@ -203,7 +203,7 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
         cell: ({ row }) => {
           const contacts = row.original.contacts;
           if (!contacts || contacts.length === 0) {
-            return <span className="text-xs text-muted-foreground italic">No contacts</span>;
+            return <span className="text-xs text-muted-foreground italic">No verified contacts found.</span>;
           }
           const primary = contacts[0];
           return (
@@ -216,7 +216,7 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
                   {primary.name}
                 </span>
                 <span className="text-[10px] text-muted-foreground leading-none">
-                  {primary.role}
+                  {primary.role || "Role not available"}
                 </span>
               </div>
             </div>
@@ -226,12 +226,12 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
       {
         id: "actions",
         header: () => (
-          <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground text-right block pr-4">
+          <span className="text-xs font-semibold tracking-wider uppercase text-muted-foreground">
             Actions
           </span>
         ),
         cell: ({ row }) => (
-          <div className="flex justify-end pr-2">
+          <div className="flex justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -280,7 +280,9 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-6 text-xs font-semibold text-muted-foreground align-middle"
+                      className={`pl-6 align-middle text-xs font-semibold text-muted-foreground ${
+                        header.id === "actions" ? "text-right pr-10" : "text-left pr-6"
+                      }`}
                     >
                       {header.isPlaceholder
                         ? null
@@ -304,7 +306,9 @@ export function LeadTable({ data, onViewCompany }: LeadTableProps) {
                     {row.getVisibleCells().map((cell) => (
                       <td
                         key={cell.id}
-                        className="px-6 text-sm align-middle whitespace-nowrap"
+                        className={`pl-6 align-middle text-sm whitespace-nowrap ${
+                          cell.column.id === "actions" ? "text-right pr-10" : "text-left pr-6"
+                        }`}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,

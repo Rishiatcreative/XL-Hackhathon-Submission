@@ -8,21 +8,14 @@ import { motion } from "framer-motion";
 
 interface StatsCardsProps {
   companies: Company[];
+  discoveryRuns: number;
 }
 
-export function StatsCards({ companies }: StatsCardsProps) {
-  // Metric calculations
+export function StatsCards({ companies, discoveryRuns }: StatsCardsProps) {
+  // Metric calculations from the live company list
   const totalCompanies = companies.length;
-  
-  const qualifiedLeads = companies.filter((c) => c.score >= 85).length;
-  
-  // Dynamic calculation for contacts found, fallback to 0 if not present
-  const contactsFound = companies.reduce(
-    (acc, curr) => acc + (curr.contacts?.length || 0),
-    0
-  );
-  
-  const averageScore =
+  const qualifiedLeads = companies.filter((c) => c.qualified === true).length;
+  const averageICP =
     totalCompanies > 0
       ? Math.round(companies.reduce((acc, curr) => acc + curr.score, 0) / totalCompanies)
       : 0;
@@ -30,31 +23,31 @@ export function StatsCards({ companies }: StatsCardsProps) {
   // Configuration for stats items
   const stats = [
     {
-      title: "Total Companies",
+      title: "Companies",
       value: totalCompanies,
       icon: Building2,
-      description: "Monitored company profiles",
+      description: "Total monitored companies",
       color: "text-blue-500 bg-blue-500/10 dark:bg-blue-500/20"
     },
     {
       title: "Qualified Leads",
       value: qualifiedLeads,
       icon: Award,
-      description: "Leads with score above 85",
+      description: "Leads matching ICP criteria",
       color: "text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20"
     },
     {
-      title: "Contacts Found",
-      value: contactsFound,
+      title: "Discovery Runs",
+      value: discoveryRuns,
       icon: Users,
-      description: "Direct decision-makers key info",
+      description: "Actual pipeline executions",
       color: "text-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20"
     },
     {
-      title: "Average Score",
-      value: `${averageScore}/100`,
+      title: "Average ICP",
+      value: `${averageICP}/100`,
       icon: Gauge,
-      description: "Mean conversion propensity",
+      description: "Mean qualification score",
       color: "text-amber-500 bg-amber-500/10 dark:bg-amber-500/20"
     }
   ];

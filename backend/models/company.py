@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, JSON
 from sqlalchemy import UUID
 from database import Base
 
@@ -38,5 +38,12 @@ class Company(Base):
     news_headlines = Column(String, nullable=True)
     discovery_timestamp = Column(DateTime, default=datetime.utcnow)
     
+    # Premium features fields
+    sales_playbook = Column(JSON, nullable=True)
+    icp_breakdown = Column(JSON, nullable=True)
+    discovery_confidence = Column(Float, nullable=True)
+    evidence_sources = Column(JSON, nullable=True)
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     contacts = relationship("Contact", back_populates="company", cascade="all, delete-orphan", lazy="joined")
+
